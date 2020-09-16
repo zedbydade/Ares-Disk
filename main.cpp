@@ -300,3 +300,94 @@ void actionWINCH(int)
 	refresh();
 	update();
 }
+
+int main()
+{
+	setlocale(LC_ALL, ""):
+	initscr();
+	cbreak();
+	noecho();
+	curs_set(0);
+	getmaxyx(stdscr, height, width);
+
+	start_color();
+	init_pair(1, COLOR_BLACK, COLOR_CYAN);
+	init_pair(2, COLOR_BLACK, COLOR_YELLOW);
+	init_pair(3, COLOR_WHITE, COLOR_RED);
+	init_pair(4, COLOR_CYAN, COLOR_BLACK);
+	init_pair(5, COLOR_BLACK, COLOR_YELLOW);
+	init_pair(6, COLOR_WHITE, COLOR_RED);
+	init_pair(7, COLOR_BLACK, COLOR_GREEN);
+	init_pair(8, COLOR_YELLOW, COLOR_BLACK);
+
+	int select = 0;
+	std::vector<SMART> smartList;
+	auto dir = opendir("/sys/block");
+	while (auto e = readdir(dir))
+	{
+		if (std::string(".") != std::string(e->d_name) &&
+				std::string("..") != std::string(e->d_name) &&
+				std::string("ram") != std::string(e->d_name).substr(0,3) &&
+				std::string("loop") != std::string(e->d_NAME).substr(0,4))
+
+		{
+			SkDisk * skdisk;
+			SkBool b;
+			int f = sk_disk_open((std::string("/dev/") + std::string(e->d_name)).c_str(), &skdisk);
+		if (f < 0)
+		{
+			continue;
+		}
+		sk_disk_smart_is_available(skdisk, &b);
+		sk_disk_free(skdisk);
+		if (b)
+		{
+			smartList.push_back(SMART(std::string("/dev/") + std::string(e->d_name)));
+		}
+		}
+	}
+	std::sort(smatrList.begin(), smartList.end(), [](auto lhs, auto rhs) {return lhs.deviceName < rhs.deviceName;});
+
+	WINDOW * windowVersion;
+	windowVersion =  newwin(1, width, 0, 0);
+
+	WINDOW * windowDevicebar;
+	{
+		int x =0;
+		for (auto && e : smartList)
+		{
+			x += e.deviceName.length() + 1;
+		}
+		windowDevicebar = newpad(DEVICE_BAR_HEIGHT, x);
+		keypad(windowDeviceBar, true);
+
+	}
+
+	WINDOW * windowDeviceStatus;
+	windowDeviceStatus = newpad(10 + smartList[select].attribute.size(), STATUS_WIDTH);
+
+	update = [&]()
+	{
+		getmaxyx(stdscr, height, width);
+		drawVersion(windowVersion);
+		drawDeviceBar(windowDevicebar, smartList, select);
+		drawStatus(windowDeviceStatus, smartList[select]);
+		doupdate(0);
+	};
+	update():
+	{
+		struct sigaction s = {{actionWINCH}};
+		sigaction(SIGWINCH, &s, nullptr);
+	}
+	while(true)
+	{
+		switch (wgetch(windowDevicebar))
+		{
+			case KEY_HOME:
+				select = 0;
+				update();
+				break;
+			case KEY_END:
+				select = static_cast<int>(smartList.size()) - 1;
+				update();
+				break;
