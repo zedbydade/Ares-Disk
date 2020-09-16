@@ -303,7 +303,7 @@ void actionWINCH(int)
 
 int main()
 {
-	setlocale(LC_ALL, ""):
+	setlocale(LC_ALL, "");
 	initscr();
 	cbreak();
 	noecho();
@@ -326,14 +326,13 @@ int main()
 	while (auto e = readdir(dir))
 	{
 		if (std::string(".") != std::string(e->d_name) &&
-				std::string("..") != std::string(e->d_name) &&
-				std::string("ram") != std::string(e->d_name).substr(0,3) &&
-				std::string("loop") != std::string(e->d_NAME).substr(0,4))
-
+			std::string("..") != std::string(e->d_name) &&
+			std::string("ram") != std::string(e->d_name).substr(0,3) &&
+			std::string("loop") != std::string(e->d_name).substr(0,4))
 		{
-			SkDisk * skdisk;
-			SkBool b;
-			int f = sk_disk_open((std::string("/dev/") + std::string(e->d_name)).c_str(), &skdisk);
+		SkDisk * skdisk;
+		SkBool b;
+		int f = sk_disk_open((std::string("/dev/") + std::string(e->d_name)).c_str(), &skdisk);
 		if (f < 0)
 		{
 			continue;
@@ -346,21 +345,20 @@ int main()
 		}
 		}
 	}
-	std::sort(smatrList.begin(), smartList.end(), [](auto lhs, auto rhs) {return lhs.deviceName < rhs.deviceName;});
+	std::sort(smartList.begin(), smartList.end(), [](auto lhs, auto rhs){return lhs.deviceName < rhs.deviceName;});
 
 	WINDOW * windowVersion;
-	windowVersion =  newwin(1, width, 0, 0);
+	windowVersion = newwin(1, width, 0, 0);
 
-	WINDOW * windowDevicebar;
+	WINDOW * windowDeviceBar;
 	{
-		int x =0;
-		for (auto && e : smartList)
-		{
-			x += e.deviceName.length() + 1;
-		}
-		windowDevicebar = newpad(DEVICE_BAR_HEIGHT, x);
-		keypad(windowDeviceBar, true);
-
+	int x = 0;
+	for (auto && e : smartList)
+	{
+		x += e.deviceName.length() + 1;
+	}
+	windowDeviceBar = newpad(DEVICE_BAR_HEIGHT, x);
+	keypad(windowDeviceBar, true);
 	}
 
 	WINDOW * windowDeviceStatus;
@@ -370,24 +368,47 @@ int main()
 	{
 		getmaxyx(stdscr, height, width);
 		drawVersion(windowVersion);
-		drawDeviceBar(windowDevicebar, smartList, select);
+		drawDeviceBar(windowDeviceBar, smartList, select);
 		drawStatus(windowDeviceStatus, smartList[select]);
-		doupdate(0);
+		doupdate();
 	};
-	update():
+	update();
 	{
 		struct sigaction s = {{actionWINCH}};
 		sigaction(SIGWINCH, &s, nullptr);
 	}
 	while(true)
 	{
-		switch (wgetch(windowDevicebar))
+		switch (wgetch(windowDeviceBar))
 		{
 			case KEY_HOME:
 				select = 0;
 				update();
 				break;
+
 			case KEY_END:
 				select = static_cast<int>(smartList.size()) - 1;
 				update();
 				break;
+
+			case KEY_LEFT:
+			case 'h':
+				select = std::max(select - 1, 0);
+				update();
+				break;
+
+			case KEY_RIGHT:
+			case 'l':
+				select = std::min(select + 1, static_cast<int>(smartList.size()) - 1);
+				update();
+				break;
+
+			case 'q':
+				endwin();
+				return 0;
+
+			default:
+				break;
+		}
+	}
+}
