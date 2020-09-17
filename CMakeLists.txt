@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.0.0)
+project(Ares-Disk )
+add_executable(AresDisk main.cpp)
+set(CMAKE_CXX_FLAGS "-Wall -std=c++14")
+SET_TARGET_PROPERTIES(AresDisk PROPERTIES OUTPUT_NAME crazy)
+target_link_libraries(AresDisk atasmart)
+target_link_libraries(AresDisk ncursesw)
+INSTALL(TARGETS AresDisk RUNTIME DESTINATION /usr/sbin)
