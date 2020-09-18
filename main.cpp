@@ -398,7 +398,6 @@ int main()
 	init_pair(8, COLOR_YELLOW, COLOR_BLACK);
 
 	int select = 0;
-	int smart_ret = 0;
 	std::vector<SMART> smartList;
 	auto dir = opendir("/sys/block");
 	while (auto e = readdir(dir))
@@ -459,6 +458,7 @@ int main()
 		getmaxyx(stdscr, height, width);
 		wclear(windowVersion);
 		drawVersion(windowVersion);
+		wclear(windowDeviceBar);
 		drawDeviceBar(windowDeviceBar, smartList, select);
 		wclear(windowDeviceStatus);
 		drawStatus(windowDeviceStatus, smartList[select]);
