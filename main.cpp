@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <array>
 #include <vector>
@@ -18,6 +17,17 @@ constexpr int const VERSION_HEIGHT = 1;
 
 int width;
 int height;
+
+class Option
+{
+public:
+	bool hideSerial;
+	Option()
+	:
+	hideSerial(false)
+	{
+	}
+};
 
 enum class Health
 {
@@ -192,7 +202,7 @@ void drawVersion(WINDOW * window)
 	wattroff(window, COLOR_PAIR(4));
 
 	wattrset(window, COLOR_PAIR(8));
-	mvwprintw(window, 0, (width - sizeof(" Ares-Disk-1.0.0 ")) / 2, " Ares-Disk-1.0.0 ");
+	mvwprintw(window, 0, (width - sizeof(" Ares-Disk-1.0.2 ")) / 2, " Ares-Disk-1.0.2 ");
 	wattroff(window, COLOR_PAIR(8));
 
 	wnoutrefresh(window);
@@ -242,7 +252,7 @@ void drawDeviceBar(WINDOW * window, std::vector<SMART> const & smartList, int se
 	pnoutrefresh(window, 0, 0, 1, 0, DEVICE_BAR_HEIGHT, width - 1);
 }
 
-void drawStatus(WINDOW * window, SMART const & smart)
+void drawStatus(WINDOW * window, SMART const & smart, Option const & option)
 {
 	wresize(window, 10 + smart.attribute.size(), STATUS_WIDTH);
 	wborder(window, '|', '|', '-', '-', '+', '+', '+', '+');
@@ -288,7 +298,14 @@ void drawStatus(WINDOW * window, SMART const & smart)
 	mvwprintw(window, 3, (int)(STATUS_WIDTH * (1.0 / 5)), "Serial:  ");
 	wattroff(window, COLOR_PAIR(4));
 	wattrset(window, COLOR_PAIR(4) | A_BOLD);
-	wprintw(window, " %s", smart.serial.c_str());
+	if (option.hideSerial)
+	{
+		wprintw(window, " ********************");
+	}
+	else
+	{
+		wprintw(window, " %s", smart.serial.c_str());
+	}
 	wattroff(window, COLOR_PAIR(4) | A_BOLD);
 
 	wattrset(window, COLOR_PAIR(4));
@@ -366,7 +383,13 @@ void drawStatus(WINDOW * window, SMART const & smart)
 #else
 		mvwprintw(window, 9 + i, 1, " %-7s %02X %-28s %7d %5d %9d %012d ",
 #endif//RAWDEC
-			healthToString(attributeToHealth(smart.attribute[i])).c_str(), smart.attribute[i].id, smart.attribute[i].name.c_str(), smart.attribute[i].current, smart.attribute[i].worst, smart.attribute[i].threshold, smart.attribute[i].raw);
+			healthToString(attributeToHealth(smart.attribute[i])).c_str(),
+			smart.attribute[i].id,
+			smart.attribute[i].name.c_str(),
+			smart.attribute[i].current,
+			smart.attribute[i].worst,
+			smart.attribute[i].threshold,
+			smart.attribute[i].raw);
 		wattroff(window, COLOR_PAIR(4 + static_cast<int>(attributeToHealth(smart.attribute[i]))));
 	}
 	pnoutrefresh(window, 0, 0,
@@ -402,7 +425,6 @@ int main()
 	init_pair(7, COLOR_BLACK, COLOR_GREEN);
 	init_pair(8, COLOR_YELLOW, COLOR_BLACK);
 
-	int select = 0;
 	std::vector<SMART> smartList;
 	auto dir = opendir("/sys/block");
 	while (auto e = readdir(dir))
@@ -412,23 +434,23 @@ int main()
 			std::string("ram") != std::string(e->d_name).substr(0,3) &&
 			std::string("loop") != std::string(e->d_name).substr(0,4))
 		{
-		SkDisk * skdisk;
-		SkBool b;
-		int f = sk_disk_open((std::string("/dev/") + std::string(e->d_name)).c_str(), &skdisk);
-		if (f < 0)
-		{
-			continue;
-		}
-		smart_ret = sk_disk_smart_is_available(skdisk, &b);
-		sk_disk_free(skdisk);
-		if (smart_ret < 0)
-		{
-			continue;
-		}
-		if (b)
-		{
-			smartList.push_back(SMART(std::string("/dev/") + std::string(e->d_name)));
-		}
+			SkDisk * skdisk;
+			SkBool b;
+			int f = sk_disk_open((std::string("/dev/") + std::string(e->d_name)).c_str(), &skdisk);
+			if (f < 0)
+			{
+				continue;
+			}
+			int smart_ret = sk_disk_smart_is_available(skdisk, &b);
+			sk_disk_free(skdisk);
+			if (smart_ret < 0)
+			{
+				continue;
+			}
+			if (b)
+			{
+				smartList.push_back(SMART(std::string("/dev/") + std::string(e->d_name)));
+			}
 		}
 	}
 	std::sort(smartList.begin(), smartList.end(), [](SMART const & lhs, SMART const & rhs){return lhs.deviceName < rhs.deviceName;});
@@ -437,9 +459,12 @@ int main()
 	{
 		endwin();
 		std::cerr << "No S.M.A.R.T readable devices." << std::endl;
-		std::cerr << "If you are non-root user, plese use sudo or become root." << std::endl;
+		std::cerr << "If you are non-root user, please use sudo or become root." << std::endl;
 		return 1;
 	}
+
+	int select = 0;
+	Option option;
 
 	WINDOW * windowVersion;
 	windowVersion = newwin(1, width, 0, 0);
@@ -466,7 +491,7 @@ int main()
 		wclear(windowDeviceBar);
 		drawDeviceBar(windowDeviceBar, smartList, select);
 		wclear(windowDeviceStatus);
-		drawStatus(windowDeviceStatus, smartList[select]);
+		drawStatus(windowDeviceStatus, smartList[select], option);
 		doupdate();
 	};
 	update();
@@ -476,7 +501,7 @@ int main()
 		sigaction(SIGWINCH, &s, nullptr);
 	}
 
-	while(true)
+	while (true)
 	{
 		switch (wgetch(windowDeviceBar))
 		{
@@ -509,6 +534,15 @@ int main()
 				refresh();
 				update();
 				break;
+
+
+			case 's':
+				option.hideSerial = !option.hideSerial;
+				clear();
+				refresh();
+				update();
+				break;
+
 
 			case 'q':
 				endwin();
