@@ -11,6 +11,11 @@ Ares-Disk is an interactive TUI S.M.A.R.T viewer for Unix systems.
 * ncurses
 * libatsmart
 
+#### Debian(or derivative) Systems
+```
+# apt-get install libatasmart-dev libncurses5-dev libncursesw5-dev
+```
+
 ## Build and Run
 ```
 $ mkdir build
